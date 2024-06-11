@@ -1,18 +1,16 @@
-const { pool, redisClient } = require('../app');
-const { promisify } = require('util');
-const getAsync = promisify(redisClient.get).bind(redisClient);
-const setAsync = promisify(redisClient.set).bind(redisClient);
+const { pool } = require('../db/db');
+const redisClient = require('../db/redisClient');
 
 const getCategories = async () => {
   const cacheKey = 'categories:all';
-  let categories = await getAsync(cacheKey);
+  let categories = await redisClient.get(cacheKey);
 
   if (categories) {
     return JSON.parse(categories);
   } else {
     const result = await pool.query('SELECT * FROM categories');
     categories = result.rows;
-    await setAsync(cacheKey, JSON.stringify(categories), 'EX', 3600);
+    await redisClient.set(cacheKey, JSON.stringify(categories), 'EX', 3600);
     return categories;
   }
 };
