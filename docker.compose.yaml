@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres
+    container_name: postgres-container
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=mediom
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=gajah
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis
+
+  backend:
+    build: ./server
+    container_name: backend-container
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+      - mlbackend
+    environment:
+      - DATABASE_URL=postgresql://postgres:gajah@postgres/mediom
+
+  frontend:
+    build: ./frontend
+    container_name: frontend-container
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+networks:
+  app-network:
+    driver: bridge

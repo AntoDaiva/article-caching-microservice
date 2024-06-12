@@ -3,16 +3,19 @@ const redisClient = require('../db/redisClient');
 
 const getArticleById = async (id) => {
   const cacheKey = `article:${id}`;
+  redisClient.connect();
   let article = await redisClient.get(cacheKey);
 
   if (article) {
     console.log('cache hit!');
+    redisClient.quit();
     return JSON.parse(article);   
   } else {
     console.log('cache miss!');
-    const result = await pool.query('SELECT * FROM articles WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM article WHERE id = $1', [id]);
     article = result.rows[0];
     await redisClient.set(cacheKey, JSON.stringify(article), 'EX', 3600);
+    redisClient.quit();
     return article;
   }
 };
@@ -36,7 +39,28 @@ const getLatestArticles = async () => {
   }
 };
 
+const addArticle = async (articleData) => {
+  const query = `INSERT INTO article (content, publish_date, headline, category) VALUES ('${articleData.content}', '${articleData.publish_date}', '${articleData.headline}', '${articleData.category}') RETURNING *`;
+  redisClient.connect();
+
+  try {
+    const result = await pool.query(query);
+    const newArticle = result.rows[0];
+    if (newArticle) {
+      const cacheKey = `article:${newArticle.id}`;
+      await redisClient.set(cacheKey, JSON.stringify(newArticle), 'EX', 3600);
+    }
+    redisClient.quit();
+    return newArticle;
+  } catch (error) {
+    console.error('Error adding article:', error);
+    redisClient.quit();
+    throw error;
+  }
+};
+
 module.exports = {
   getArticleById,
   getLatestArticles,
+  addArticle
 };

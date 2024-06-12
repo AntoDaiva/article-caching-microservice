@@ -20,4 +20,14 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.post('/', async (req, res) => {
+  try {
+    const articleData = req.body;
+    const newArticle = await articleService.addArticle(articleData);
+    res.status(201).json(newArticle);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
